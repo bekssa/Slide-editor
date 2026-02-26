@@ -6,6 +6,7 @@ import { Type, Image as ImageIcon, Trash2, Settings2, Layers, RotateCw } from "l
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 interface SlideCanvasProps {
   slide: (Slide & { elements: Element[] }) | undefined;
