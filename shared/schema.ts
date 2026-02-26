@@ -19,9 +19,9 @@ export const slides = pgTable("slides", {
 export const elements = pgTable("elements", {
   id: serial("id").primaryKey(),
   slideId: integer("slide_id").references(() => slides.id, { onDelete: 'cascade' }).notNull(),
-  type: text("type").notNull(), // 'text', 'image'
+  type: text("type").notNull(), // 'text', 'image', 'shape'
   content: text("content"), // text content or image url
-  style: jsonb("style"), // {x, y, width, height, fontSize, color}
+  style: jsonb("style"), // {x, y, width, height, fontSize, color, rotation, opacity, zIndex, shadow}
 });
 
 export const presentationsRelations = relations(presentations, ({ many }) => ({
