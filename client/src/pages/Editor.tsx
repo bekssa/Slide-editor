@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "wouter";
-import { ArrowLeft, Plus, Type, Image as ImageIcon, Layout, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Type, Image as ImageIcon, Layout, Download, Loader2, Trash2 } from "lucide-react";
 import { usePresentation } from "@/hooks/use-presentations";
 import { useCreateSlide, useDeleteSlide, useCreateElement } from "@/hooks/use-editor";
 import { Button } from "@/components/ui/button";
