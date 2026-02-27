@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "wouter";
 import { 
   ArrowLeft, Plus, Type, Image as ImageIcon, Layout, Download, Loader2, Trash2, 
@@ -18,9 +18,13 @@ import screen2 from "@assets/screen_1772138412337.png";
 
 type Tool = 'elements' | 'text' | 'uploads' | 'shapes' | 'background' | 'charts';
 
-export default function Editor() {
+interface EditorProps {
+  overrideId?: number;
+}
+
+export default function Editor({ overrideId }: EditorProps) {
   const params = useParams();
-  const presentationId = parseInt(params.id || "0", 10);
+  const presentationId = overrideId || parseInt(params.id || "0", 10);
   const { data: presentation, isLoading, error } = usePresentation(presentationId);
   const { toast } = useToast();
 
@@ -41,14 +45,14 @@ export default function Editor() {
   }, [presentation, activeSlideId]);
 
   if (isLoading) {
-    return <div className="h-screen w-full flex items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return <div className="h-screen w-full flex items-center justify-center bg-[#121212]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
   if (error || !presentation) {
     return (
-      <div className="h-screen w-full flex flex-col items-center justify-center">
-        <h2 className="text-xl font-bold mb-4">Presentation not found</h2>
-        <Link href="/"><Button>Back to Dashboard</Button></Link>
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-[#121212] text-white">
+        <h2 className="text-xl font-bold mb-4">Editor initialization failed</h2>
+        <p className="text-muted-foreground mb-4">Please ensure the database is seeded.</p>
       </div>
     );
   }
@@ -61,7 +65,7 @@ export default function Editor() {
       const newSlide = await createSlideMutation.mutateAsync({ 
         presentationId, 
         orderIndex, 
-        background: '#ffffff' 
+        background: '#1e1e1e' 
       });
       setActiveSlideId(newSlide.id);
     } catch (e) {
@@ -83,7 +87,7 @@ export default function Editor() {
     if (!activeSlideId) return;
     
     const defaultStyle = type === 'text' 
-      ? { x: 100, y: 100, width: 400, height: 100, fontSize: 32, color: '#000000', rotation: 0, opacity: 1, zIndex: 1 }
+      ? { x: 100, y: 100, width: 400, height: 100, fontSize: 32, color: '#ffffff', rotation: 0, opacity: 1, zIndex: 1 }
       : type === 'shape'
       ? { x: 100, y: 100, width: 100, height: 100, color: '#3b82f6', rotation: 0, opacity: 1, zIndex: 1 }
       : { x: 100, y: 100, width: 300, height: 200, rotation: 0, opacity: 1, zIndex: 1 };
@@ -115,25 +119,24 @@ export default function Editor() {
   const recentUploads = [screen1, screen2];
 
   return (
-    <div className="flex flex-col h-screen bg-[#F9F9FB] dark:bg-background overflow-hidden text-[#1A1A1A] dark:text-foreground font-sans">
+    <div className="flex flex-col h-screen bg-[#0F0F0F] overflow-hidden text-[#E0E0E0] font-sans dark">
       {/* Top Navigation */}
-      <header className="h-16 border-b bg-white dark:bg-card flex items-center px-6 justify-between shrink-0 z-30">
+      <header className="h-16 border-b border-[#2A2A2A] bg-[#121212] flex items-center px-6 justify-between shrink-0 z-30">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#2D1B69] rounded-lg flex items-center justify-center text-white font-bold">S</div>
-            <span className="font-bold text-lg tracking-tight">Slides & Co.</span>
+            <span className="font-bold text-xl tracking-tight text-white">Slides</span>
           </div>
-          <Separator orientation="vertical" className="h-6" />
-          <h1 className="font-medium text-sm text-muted-foreground truncate max-w-[300px]">
+          <Separator orientation="vertical" className="h-6 bg-[#2A2A2A]" />
+          <h1 className="font-medium text-sm text-[#8E8E93] truncate max-w-[300px]">
             {presentation.title}
           </h1>
         </div>
         
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" className="rounded-xl border-[#E5E5E5] font-medium px-4 h-10">
+          <Button variant="outline" size="sm" className="rounded-xl border-[#2A2A2A] bg-transparent hover:bg-[#1E1E1E] text-white font-medium px-4 h-10">
             <Download className="h-4 w-4 mr-2" /> Download PPTX
           </Button>
-          <div className="w-10 h-10 rounded-full bg-muted overflow-hidden border border-border">
+          <div className="w-10 h-10 rounded-full bg-[#1E1E1E] overflow-hidden border border-[#2A2A2A]">
             <img src="https://github.com/shadcn.png" alt="User" className="w-full h-full object-cover" />
           </div>
         </div>
@@ -141,14 +144,14 @@ export default function Editor() {
 
       <div className="flex flex-1 overflow-hidden relative">
         {/* Left Vertical Tool Dock */}
-        <aside className="w-20 border-r bg-white dark:bg-card flex flex-col items-center py-6 gap-6 shrink-0 z-20">
+        <aside className="w-20 border-r border-[#2A2A2A] bg-[#121212] flex flex-col items-center py-6 gap-6 shrink-0 z-20">
           {tools.map((tool) => (
             <button
               key={tool.id}
               onClick={() => setActiveTool(tool.id)}
-              className={`flex flex-col items-center gap-1.5 transition-all duration-200 group ${activeTool === tool.id ? 'text-[#2D1B69]' : 'text-[#8E8E93] hover:text-[#2D1B69]'}`}
+              className={`flex flex-col items-center gap-1.5 transition-all duration-200 group ${activeTool === tool.id ? 'text-white' : 'text-[#8E8E93] hover:text-white'}`}
             >
-              <div className={`p-2.5 rounded-xl transition-all duration-200 ${activeTool === tool.id ? 'bg-[#F2F0FF]' : 'group-hover:bg-[#F2F0FF]'}`}>
+              <div className={`p-2.5 rounded-xl transition-all duration-200 ${activeTool === tool.id ? 'bg-[#1E1E1E]' : 'group-hover:bg-[#1E1E1E]'}`}>
                 <tool.icon className={`h-6 w-6 ${activeTool === tool.id ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
               </div>
               <span className="text-[10px] font-bold uppercase tracking-wider">{tool.label}</span>
@@ -157,43 +160,40 @@ export default function Editor() {
         </aside>
 
         {/* Dynamic Tool Panel */}
-        <aside className="w-80 border-r bg-white dark:bg-card flex flex-col shrink-0 z-10">
+        <aside className="w-80 border-r border-[#2A2A2A] bg-[#121212] flex flex-col shrink-0 z-10">
           <div className="p-6">
-            <h2 className="text-xl font-bold mb-6 capitalize">{activeTool}</h2>
+            <h2 className="text-xl font-bold mb-6 capitalize text-white">{activeTool}</h2>
             
             {activeTool === 'uploads' && (
               <div className="space-y-8">
-                <div className="border-2 border-dashed border-[#E5E5E5] rounded-2xl p-8 flex flex-col items-center justify-center bg-[#F9F9FB] hover:bg-[#F2F0FF] hover:border-[#2D1B69] transition-all cursor-pointer group">
-                  <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                    <UploadCloud className="h-6 w-6 text-[#2D1B69]" />
+                <div className="border-2 border-dashed border-[#2A2A2A] rounded-2xl p-8 flex flex-col items-center justify-center bg-[#181818] hover:bg-[#1E1E1E] hover:border-[#3A3A3A] transition-all cursor-pointer group">
+                  <div className="w-12 h-12 rounded-full bg-[#121212] shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                    <UploadCloud className="h-6 w-6 text-white" />
                   </div>
-                  <span className="text-sm font-semibold mb-1">Drag & drop area</span>
-                  <Button variant="link" className="text-[#2D1B69] font-bold h-auto p-0">Upload media</Button>
+                  <span className="text-sm font-semibold mb-1 text-white">Drag & drop area</span>
+                  <Button variant="link" className="text-muted-foreground hover:text-white font-bold h-auto p-0">Upload media</Button>
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-bold text-[#8E8E93] mb-4">Recent Uploads</h3>
+                  <h3 className="text-xs font-bold text-[#8E8E93] uppercase tracking-wider mb-4">Recent Uploads</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <button 
                       onClick={handleAddSlide}
-                      className="aspect-square rounded-xl border border-[#E5E5E5] flex items-center justify-center bg-white hover:border-[#2D1B69] transition-all"
+                      className="aspect-square rounded-xl border border-[#2A2A2A] flex items-center justify-center bg-[#181818] hover:border-[#3A3A3A] transition-all"
                     >
                       <Plus className="h-6 w-6 text-[#8E8E93]" />
                     </button>
                     {recentUploads.map((img, i) => (
                       <div 
                         key={i} 
-                        className="aspect-square rounded-xl overflow-hidden border border-[#E5E5E5] relative group cursor-pointer"
+                        className="aspect-square rounded-xl overflow-hidden border border-[#2A2A2A] relative group cursor-pointer"
                         onClick={() => handleAddElement('image', img)}
                       >
                         <img src={img} alt="Upload" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <Plus className="text-white h-6 w-6" />
                         </div>
                       </div>
-                    ))}
-                    {[...Array(4)].map((_, i) => (
-                      <div key={`empty-${i}`} className="aspect-square rounded-xl bg-[#F2F2F7] animate-pulse" />
                     ))}
                   </div>
                 </div>
@@ -204,21 +204,21 @@ export default function Editor() {
               <div className="grid grid-cols-1 gap-3">
                 <Button 
                   variant="outline" 
-                  className="h-16 rounded-xl border-[#E5E5E5] justify-start px-4 text-lg font-bold"
+                  className="h-16 rounded-xl border-[#2A2A2A] bg-[#181818] hover:bg-[#1E1E1E] justify-start px-4 text-lg font-bold text-white"
                   onClick={() => handleAddElement('text', 'Add a Heading')}
                 >
                   Add a Heading
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="h-14 rounded-xl border-[#E5E5E5] justify-start px-4 font-semibold"
+                  className="h-14 rounded-xl border-[#2A2A2A] bg-[#181818] hover:bg-[#1E1E1E] justify-start px-4 font-semibold text-white"
                   onClick={() => handleAddElement('text', 'Add a Subheading')}
                 >
                   Add a Subheading
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="h-12 rounded-xl border-[#E5E5E5] justify-start px-4 text-sm"
+                  className="h-12 rounded-xl border-[#2A2A2A] bg-[#181818] hover:bg-[#1E1E1E] justify-start px-4 text-sm text-white"
                   onClick={() => handleAddElement('text', 'Add body text')}
                 >
                   Add body text
@@ -229,21 +229,17 @@ export default function Editor() {
         </aside>
 
         {/* Main Canvas Area */}
-        <main className="flex-1 relative flex flex-col bg-[#F2F2F7] dark:bg-background/50 overflow-hidden">
-          <div className="absolute top-6 left-6 z-10">
-            <span className="text-xs font-bold text-[#8E8E93] uppercase tracking-widest">Slide Canvas</span>
-          </div>
-          
-          <div className="flex-1 flex items-center justify-center p-12 overflow-auto">
-            <SlideCanvas slide={activeSlide} presentationId={presentationId} />
+        <main className="flex-1 relative flex flex-col bg-[#0A0A0A] overflow-hidden">
+          <div className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
+             <SlideCanvas slide={activeSlide} presentationId={presentationId} />
           </div>
 
           {/* Bottom Slide Strip */}
-          <div className={`transition-all duration-300 ease-in-out bg-white dark:bg-card border-t z-20 ${isSlideStripOpen ? 'h-48' : 'h-10'}`}>
-            <div className="h-10 flex items-center justify-center border-b relative">
+          <div className={`transition-all duration-300 ease-in-out bg-[#121212] border-t border-[#2A2A2A] z-20 ${isSlideStripOpen ? 'h-48' : 'h-10'}`}>
+            <div className="h-10 flex items-center justify-center border-b border-[#2A2A2A] relative">
               <button 
                 onClick={() => setIsSlideStripOpen(!isSlideStripOpen)}
-                className="p-1 hover:bg-muted rounded-md absolute -top-4 bg-white border shadow-sm"
+                className="p-1 hover:bg-[#1E1E1E] rounded-md absolute -top-4 bg-[#121212] border border-[#2A2A2A] shadow-sm text-white"
               >
                 {isSlideStripOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
               </button>
@@ -257,16 +253,16 @@ export default function Editor() {
                       key={slide.id}
                       onClick={() => setActiveSlideId(slide.id)}
                       className={`group relative w-48 aspect-video rounded-xl border-2 cursor-pointer overflow-hidden transition-all duration-200 shrink-0 shadow-sm
-                        ${activeSlideId === slide.id ? 'border-[#2D1B69] ring-4 ring-[#2D1B69]/10' : 'border-[#E5E5E5] hover:border-[#2D1B69]/50'}`}
-                      style={{ background: slide.background || '#fff' }}
+                        ${activeSlideId === slide.id ? 'border-white ring-4 ring-white/10' : 'border-[#2A2A2A] hover:border-[#3A3A3A]'}`}
+                      style={{ background: slide.background || '#1e1e1e' }}
                     >
-                      <div className="absolute top-2 left-2 w-6 h-6 rounded-md bg-white/80 backdrop-blur-sm border flex items-center justify-center text-[10px] font-bold shadow-sm">
+                      <div className="absolute top-2 left-2 w-6 h-6 rounded-md bg-[#121212]/80 backdrop-blur-sm border border-[#2A2A2A] flex items-center justify-center text-[10px] font-bold shadow-sm text-white">
                         {index + 1}
                       </div>
                       
                       <button 
                         onClick={(e) => handleDeleteSlide(slide.id, e)}
-                        className="absolute top-2 right-2 p-1.5 bg-white/80 hover:bg-destructive/10 text-destructive rounded-lg opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm border shadow-sm"
+                        className="absolute top-2 right-2 p-1.5 bg-[#121212]/80 hover:bg-destructive/20 text-destructive rounded-lg opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm border border-[#2A2A2A] shadow-sm"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -275,7 +271,7 @@ export default function Editor() {
                   
                   <button 
                     onClick={handleAddSlide}
-                    className="w-48 aspect-video rounded-xl border-2 border-dashed border-[#E5E5E5] flex flex-col items-center justify-center text-[#8E8E93] hover:border-[#2D1B69] hover:text-[#2D1B69] hover:bg-[#F2F0FF] transition-all shrink-0"
+                    className="w-48 aspect-video rounded-xl border-2 border-dashed border-[#2A2A2A] flex flex-col items-center justify-center text-[#8E8E93] hover:border-[#3A3A3A] hover:text-white hover:bg-[#181818] transition-all shrink-0"
                   >
                     <Plus className="h-8 w-8 mb-1" />
                     <span className="text-xs font-bold">New Slide</span>

@@ -5,13 +5,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 
-import Dashboard from "./pages/Dashboard";
 import Editor from "./pages/Editor";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard}/>
+      <Route path="/" component={() => <Editor overrideId={1} />}/>
       <Route path="/editor/:id" component={Editor}/>
       <Route component={NotFound} />
     </Switch>
@@ -22,7 +21,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Router />
+        <div className="dark">
+          <Router />
+        </div>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

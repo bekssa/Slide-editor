@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Rnd } from "react-rnd";
 import { Slide, Element } from "@shared/schema";
 import { useUpdateElement, useDeleteElement } from "@/hooks/use-editor";
-import { Type, Image as ImageIcon, Trash2, Settings2, Layers, RotateCw } from "lucide-react";
+import { Type, Image as ImageIcon, Trash2, Settings2, Layers, RotateCw, X } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -15,15 +15,42 @@ interface SlideCanvasProps {
 
 export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
   const [selectedElementId, setSelectedElementId] = useState<number | null>(null);
+  const [modalPos, setModalPos] = useState<{ x: number, y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
   
   const updateElementMutation = useUpdateElement();
   const deleteElementMutation = useDeleteElement();
+
+  // Auto-scale to fit screen
+  useEffect(() => {
+    const handleResize = () => {
+      if (!wrapperRef.current) return;
+      const padding = 80;
+      const wrapperWidth = wrapperRef.current.clientWidth - padding;
+      const wrapperHeight = wrapperRef.current.clientHeight - padding;
+      
+      const canvasWidth = 1024;
+      const canvasHeight = 576;
+      
+      const scaleX = wrapperWidth / canvasWidth;
+      const scaleY = wrapperHeight / canvasHeight;
+      const newScale = Math.min(scaleX, scaleY, 1);
+      
+      setScale(newScale);
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && e.target === containerRef.current) {
         setSelectedElementId(null);
+        setModalPos(null);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -32,7 +59,7 @@ export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
 
   if (!slide) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-muted-foreground font-medium">
+      <div className="w-full h-full flex items-center justify-center text-[#8E8E93] font-medium">
         Select or create a slide to begin
       </div>
     );
@@ -57,18 +84,31 @@ export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
   const handleDelete = (elId: number) => {
     deleteElementMutation.mutate({ id: elId, presentationId });
     setSelectedElementId(null);
+    setModalPos(null);
+  };
+
+  const handleElementClick = (e: React.MouseEvent, elId: number) => {
+    e.stopPropagation();
+    setSelectedElementId(elId);
+    setModalPos({ x: e.clientX, y: e.clientY });
   };
 
   return (
-    <div className="w-full h-full flex items-center justify-center p-8 overflow-visible relative">
+    <div ref={wrapperRef} className="w-full h-full flex items-center justify-center relative bg-transparent">
       <div 
         ref={containerRef}
-        className="relative bg-white shadow-2xl w-[1024px] h-[576px] shrink-0 overflow-hidden rounded-sm"
-        style={{ background: slide.background || '#ffffff' }}
-        onClick={() => setSelectedElementId(null)}
+        className="relative bg-[#1E1E1E] shadow-2xl w-[1024px] h-[576px] shrink-0 overflow-hidden rounded-sm origin-center transition-transform duration-200"
+        style={{ 
+          background: slide.background || '#1e1e1e',
+          transform: `scale(${scale})`
+        }}
+        onClick={() => {
+          setSelectedElementId(null);
+          setModalPos(null);
+        }}
       >
         {slide.elements?.sort((a, b) => ((a.style as any)?.zIndex || 0) - ((b.style as any)?.zIndex || 0)).map((el) => {
-          const style = (el.style as any) || { x: 50, y: 50, width: 200, height: 100, fontSize: 24, color: '#000000', rotation: 0, opacity: 1, zIndex: 1, shadow: false };
+          const style = (el.style as any) || { x: 50, y: 50, width: 200, height: 100, fontSize: 24, color: '#ffffff', rotation: 0, opacity: 1, zIndex: 1, shadow: false };
           const isSelected = selectedElementId === el.id;
 
           return (
@@ -77,6 +117,7 @@ export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
               bounds="parent"
               position={{ x: style.x || 0, y: style.y || 0 }}
               size={{ width: style.width || 200, height: style.height || 100 }}
+              scale={scale}
               onDragStop={(e, d) => {
                 if (d.x === style.x && d.y === style.y) return;
                 handleUpdateStyle(el.id, { ...style, x: d.x, y: d.y });
@@ -89,15 +130,12 @@ export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
                   ...position 
                 });
               }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedElementId(el.id);
-              }}
-              className={`group absolute ${isSelected ? 'ring-2 ring-[#2D1B69] z-50' : 'hover:ring-1 hover:ring-[#2D1B69]/50 z-10'}`}
+              onClick={(e) => handleElementClick(e, el.id)}
+              className={`group absolute ${isSelected ? 'ring-2 ring-white z-50' : 'hover:ring-1 hover:ring-white/50 z-10'}`}
               style={{ 
                 transform: `rotate(${style.rotation || 0}deg)`,
                 opacity: style.opacity ?? 1,
-                boxShadow: style.shadow ? '0 10px 25px -5px rgba(0,0,0,0.3)' : 'none'
+                boxShadow: style.shadow ? '0 10px 25px -5px rgba(0,0,0,0.5)' : 'none'
               }}
             >
               <div className="w-full h-full relative cursor-move">
@@ -105,10 +143,10 @@ export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
                   <textarea
                     value={el.content || ''}
                     onChange={(e) => handleContentChange(el.id, e.target.value)}
-                    className="w-full h-full resize-none bg-transparent border-none outline-none overflow-hidden p-2"
+                    className="w-full h-full resize-none bg-transparent border-none outline-none overflow-hidden p-2 text-white"
                     style={{ 
                       fontSize: `${style.fontSize || 24}px`,
-                      color: style.color || '#000000',
+                      color: style.color || '#ffffff',
                       fontWeight: style.fontWeight || 'normal',
                       textAlign: style.textAlign || 'left',
                       lineHeight: 1.2
@@ -117,16 +155,16 @@ export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : el.type === 'image' ? (
-                  <div className="w-full h-full bg-muted/20 flex flex-col items-center justify-center overflow-hidden">
+                  <div className="w-full h-full bg-[#181818] flex flex-col items-center justify-center overflow-hidden">
                     {el.content ? (
                       <img src={el.content} alt="Element" className="w-full h-full object-cover pointer-events-none" />
                     ) : (
                       <div className="text-center p-4">
-                        <ImageIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                        <ImageIcon className="h-8 w-8 text-[#8E8E93] mx-auto mb-2" />
                         <input 
                           type="text" 
-                          placeholder="Paste image URL..." 
-                          className="w-full bg-white px-2 py-1 text-xs border rounded shadow-sm"
+                          placeholder="Image URL..." 
+                          className="w-full bg-[#121212] text-white px-2 py-1 text-xs border border-[#2A2A2A] rounded shadow-sm"
                           onBlur={(e) => handleContentChange(el.id, e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleContentChange(el.id, (e.target as HTMLInputElement).value)}
                         />
@@ -145,30 +183,50 @@ export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
         })}
       </div>
 
-      {/* Floating Property Editor */}
-      {selectedElementId && slide.elements.find(e => e.id === selectedElementId) && (() => {
+      {/* Popover Property Editor */}
+      {selectedElementId && modalPos && slide.elements.find(e => e.id === selectedElementId) && (() => {
         const el = slide.elements.find(e => e.id === selectedElementId)!;
         const style = (el.style as any) || {};
         
+        // Calculate popover position to keep it on screen
+        const popoverWidth = 280;
+        const popoverHeight = 350;
+        let left = modalPos.x + 20;
+        let top = modalPos.y - 150;
+        
+        if (left + popoverWidth > window.innerWidth) left = modalPos.x - popoverWidth - 20;
+        if (top + popoverHeight > window.innerHeight) top = window.innerHeight - popoverHeight - 20;
+        if (top < 20) top = 20;
+
         return (
-          <div className="absolute right-[-340px] top-1/2 -translate-y-1/2 w-80 bg-white shadow-2xl rounded-2xl p-6 border border-border animate-in fade-in slide-in-from-right-4 z-50">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <Settings2 className="h-5 w-5 text-[#2D1B69]" />
+          <div 
+            className="fixed w-[280px] bg-[#121212] shadow-2xl rounded-2xl p-5 border border-[#2A2A2A] animate-in zoom-in-95 duration-200 z-[100] text-white"
+            style={{ left: `${left}px`, top: `${top}px` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#2A2A2A]">
+              <h3 className="font-bold text-sm flex items-center gap-2">
+                <Settings2 className="h-4 w-4 text-[#8E8E93]" />
                 Properties
               </h3>
-              <button onClick={() => handleDelete(el.id)} className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
-                <Trash2 className="h-5 w-5" />
-              </button>
+              <div className="flex gap-1">
+                <button onClick={() => handleDelete(el.id)} className="p-1.5 text-destructive hover:bg-destructive/10 rounded-md transition-colors">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+                <button onClick={() => { setSelectedElementId(null); setModalPos(null); }} className="p-1.5 hover:bg-[#1E1E1E] rounded-md transition-colors">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <div className="flex justify-between text-xs font-bold uppercase text-muted-foreground">
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <div className="flex justify-between text-[10px] font-bold uppercase text-[#8E8E93]">
                   <label className="flex items-center gap-2"><RotateCw className="h-3 w-3" /> Rotation</label>
                   <span>{style.rotation || 0}°</span>
                 </div>
                 <Slider 
+                  className="h-4"
                   value={[style.rotation || 0]} 
                   max={360} 
                   step={1} 
@@ -176,12 +234,13 @@ export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
                 />
               </div>
 
-              <div className="space-y-3">
-                <div className="flex justify-between text-xs font-bold uppercase text-muted-foreground">
+              <div className="space-y-2">
+                <div className="flex justify-between text-[10px] font-bold uppercase text-[#8E8E93]">
                   <label className="flex items-center gap-2"><Layers className="h-3 w-3" /> Opacity</label>
                   <span>{Math.round((style.opacity ?? 1) * 100)}%</span>
                 </div>
                 <Slider 
+                  className="h-4"
                   value={[(style.opacity ?? 1) * 100]} 
                   max={100} 
                   step={1} 
@@ -189,8 +248,8 @@ export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
                 />
               </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <Label htmlFor="shadow-toggle" className="text-xs font-bold uppercase text-muted-foreground">Shadows</Label>
+              <div className="flex items-center justify-between pt-1">
+                <Label htmlFor="shadow-toggle" className="text-[10px] font-bold uppercase text-[#8E8E93]">Shadows</Label>
                 <Switch 
                   id="shadow-toggle" 
                   checked={style.shadow || false}
@@ -198,11 +257,11 @@ export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
                 />
               </div>
 
-              <div className="pt-4 border-t">
-                <label className="text-xs font-bold uppercase text-muted-foreground block mb-4">Layers</label>
+              <div className="pt-3 border-t border-[#2A2A2A]">
+                <label className="text-[10px] font-bold uppercase text-[#8E8E93] block mb-3">Layers</label>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1 rounded-xl" onClick={() => handleUpdateStyle(el.id, { ...style, zIndex: (style.zIndex || 0) + 1 })}>Bring Forward</Button>
-                  <Button variant="outline" size="sm" className="flex-1 rounded-xl" onClick={() => handleUpdateStyle(el.id, { ...style, zIndex: Math.max(0, (style.zIndex || 0) - 1) })}>Send Backward</Button>
+                  <Button variant="outline" size="sm" className="flex-1 h-8 text-[10px] uppercase font-bold border-[#2A2A2A] bg-transparent hover:bg-[#1E1E1E]" onClick={() => handleUpdateStyle(el.id, { ...style, zIndex: (style.zIndex || 0) + 1 })}>Forward</Button>
+                  <Button variant="outline" size="sm" className="flex-1 h-8 text-[10px] uppercase font-bold border-[#2A2A2A] bg-transparent hover:bg-[#1E1E1E]" onClick={() => handleUpdateStyle(el.id, { ...style, zIndex: Math.max(0, (style.zIndex || 0) - 1) })}>Backward</Button>
                 </div>
               </div>
             </div>
