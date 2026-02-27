@@ -177,28 +177,32 @@ export default function Editor({ overrideId }: EditorProps) {
 
       <div className="flex flex-1 overflow-hidden relative">
         {/* Left Vertical Tool Dock */}
-        <aside className="w-20 border-r border-[#2A2A2A] bg-[#121212] flex flex-col items-center py-6 gap-6 shrink-0 z-20">
-          <button
-            onClick={() => setActiveTool(null)}
-            className={`flex flex-col items-center gap-1.5 transition-all duration-200 group ${activeTool === null ? 'text-white' : 'text-[#8E8E93] hover:text-white'}`}
-          >
-            <div className={`p-2.5 rounded-xl transition-all duration-200 ${activeTool === null ? 'bg-[#1E1E1E]' : 'group-hover:bg-[#1E1E1E]'}`}>
-              <MousePointer2 className={`h-6 w-6 ${activeTool === null ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
+        <aside className="w-20 border-r border-[#2A2A2A] bg-[#121212] flex flex-col shrink-0 z-20">
+          <ScrollArea className="h-full w-full">
+            <div className="flex flex-col items-center py-6 gap-6">
+              <button
+                onClick={() => setActiveTool(null)}
+                className={`flex flex-col items-center gap-1.5 transition-all duration-200 group ${activeTool === null ? 'text-white' : 'text-[#8E8E93] hover:text-white'}`}
+              >
+                <div className={`p-2.5 rounded-xl transition-all duration-200 ${activeTool === null ? 'bg-[#1E1E1E]' : 'group-hover:bg-[#1E1E1E]'}`}>
+                  <MousePointer2 className={`h-6 w-6 ${activeTool === null ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider">Select</span>
+              </button>
+              {tools.map((tool) => (
+                <button
+                  key={tool.id}
+                  onClick={() => setActiveTool(tool.id)}
+                  className={`flex flex-col items-center gap-1.5 transition-all duration-200 group ${activeTool === tool.id ? 'text-white' : 'text-[#8E8E93] hover:text-white'}`}
+                >
+                  <div className={`p-2.5 rounded-xl transition-all duration-200 ${activeTool === tool.id ? 'bg-[#1E1E1E]' : 'group-hover:bg-[#1E1E1E]'}`}>
+                    <tool.icon className={`h-6 w-6 ${activeTool === tool.id ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider">{tool.label}</span>
+                </button>
+              ))}
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider">Select</span>
-          </button>
-          {tools.map((tool) => (
-            <button
-              key={tool.id}
-              onClick={() => setActiveTool(tool.id)}
-              className={`flex flex-col items-center gap-1.5 transition-all duration-200 group ${activeTool === tool.id ? 'text-white' : 'text-[#8E8E93] hover:text-white'}`}
-            >
-              <div className={`p-2.5 rounded-xl transition-all duration-200 ${activeTool === tool.id ? 'bg-[#1E1E1E]' : 'group-hover:bg-[#1E1E1E]'}`}>
-                <tool.icon className={`h-6 w-6 ${activeTool === tool.id ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider">{tool.label}</span>
-            </button>
-          ))}
+          </ScrollArea>
         </aside>
 
         {/* Dynamic Tool Panel */}
