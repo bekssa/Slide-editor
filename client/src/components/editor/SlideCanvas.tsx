@@ -152,6 +152,7 @@ export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
                   <textarea
                     value={el.content || ''}
                     onChange={(e) => handleContentChange(el.id, e.target.value)}
+                    onFocus={(e) => handleElementClick(e as any, el.id)}
                     className="w-full h-full resize-none bg-transparent border-none outline-none overflow-hidden p-2 text-white"
                     style={{ 
                       fontSize: `${style.fontSize || 24}px`,
