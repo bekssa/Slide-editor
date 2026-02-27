@@ -2,11 +2,15 @@ import { useState, useRef, useEffect } from "react";
 import { Rnd } from "react-rnd";
 import { Slide, Element } from "@shared/schema";
 import { useUpdateElement, useDeleteElement } from "@/hooks/use-editor";
-import { Type, Image as ImageIcon, Trash2, Settings2, Layers, RotateCw, X } from "lucide-react";
+import { 
+  Type, Image as ImageIcon, Trash2, Settings2, Layers, RotateCw, X, 
+  Type as TypeIcon, AlignLeft, AlignCenter, AlignRight, Bold, Palette
+} from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface SlideCanvasProps {
   slide: (Slide & { elements: Element[] }) | undefined;
@@ -93,6 +97,11 @@ export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
     setModalPos({ x: e.clientX, y: e.clientY });
   };
 
+  const textColors = [
+    '#ffffff', '#000000', '#8E8E93', '#f44336', '#e91e63', 
+    '#9c27b0', '#673ab7', '#2196f3', '#03a9f4', '#00bcd4'
+  ];
+
   return (
     <div ref={wrapperRef} className="w-full h-full flex items-center justify-center relative bg-transparent">
       <div 
@@ -148,7 +157,7 @@ export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
                       fontSize: `${style.fontSize || 24}px`,
                       color: style.color || '#ffffff',
                       fontWeight: style.fontWeight || 'normal',
-                      textAlign: style.textAlign || 'left',
+                      textAlign: (style.textAlign || 'left') as any,
                       lineHeight: 1.2
                     }}
                     placeholder="Type something..."
@@ -189,8 +198,8 @@ export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
         const style = (el.style as any) || {};
         
         // Calculate popover position to keep it on screen
-        const popoverWidth = 280;
-        const popoverHeight = 350;
+        const popoverWidth = 300;
+        const popoverHeight = el.type === 'text' ? 500 : 350;
         let left = modalPos.x + 20;
         let top = modalPos.y - 150;
         
@@ -200,14 +209,14 @@ export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
 
         return (
           <div 
-            className="fixed w-[280px] bg-[#121212] shadow-2xl rounded-2xl p-5 border border-[#2A2A2A] animate-in zoom-in-95 duration-200 z-[100] text-white"
+            className="fixed w-[300px] bg-[#121212] shadow-2xl rounded-2xl p-5 border border-[#2A2A2A] animate-in zoom-in-95 duration-200 z-[100] text-white"
             style={{ left: `${left}px`, top: `${top}px` }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#2A2A2A]">
               <h3 className="font-bold text-sm flex items-center gap-2">
                 <Settings2 className="h-4 w-4 text-[#8E8E93]" />
-                Properties
+                {el.type === 'text' ? 'Text Style' : 'Properties'}
               </h3>
               <div className="flex gap-1">
                 <button onClick={() => handleDelete(el.id)} className="p-1.5 text-destructive hover:bg-destructive/10 rounded-md transition-colors">
@@ -219,52 +228,129 @@ export function SlideCanvas({ slide, presentationId }: SlideCanvasProps) {
               </div>
             </div>
 
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <div className="flex justify-between text-[10px] font-bold uppercase text-[#8E8E93]">
-                  <label className="flex items-center gap-2"><RotateCw className="h-3 w-3" /> Rotation</label>
-                  <span>{style.rotation || 0}°</span>
-                </div>
-                <Slider 
-                  className="h-4"
-                  value={[style.rotation || 0]} 
-                  max={360} 
-                  step={1} 
-                  onValueChange={([v]) => handleUpdateStyle(el.id, { ...style, rotation: v })}
-                />
-              </div>
+            <ScrollArea className="h-[max-content] max-h-[60vh] pr-2">
+              <div className="space-y-6">
+                {el.type === 'text' && (
+                  <>
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-bold uppercase text-[#8E8E93] flex items-center gap-2">
+                        <TypeIcon className="h-3 w-3" /> Font Size
+                      </label>
+                      <div className="flex items-center gap-4">
+                        <Slider 
+                          className="flex-1"
+                          value={[style.fontSize || 24]} 
+                          min={8}
+                          max={120} 
+                          step={1} 
+                          onValueChange={([v]) => handleUpdateStyle(el.id, { ...style, fontSize: v })}
+                        />
+                        <span className="text-xs min-w-[3ch]">{style.fontSize || 24}</span>
+                      </div>
+                    </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between text-[10px] font-bold uppercase text-[#8E8E93]">
-                  <label className="flex items-center gap-2"><Layers className="h-3 w-3" /> Opacity</label>
-                  <span>{Math.round((style.opacity ?? 1) * 100)}%</span>
-                </div>
-                <Slider 
-                  className="h-4"
-                  value={[(style.opacity ?? 1) * 100]} 
-                  max={100} 
-                  step={1} 
-                  onValueChange={([v]) => handleUpdateStyle(el.id, { ...style, opacity: v / 100 })}
-                />
-              </div>
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-bold uppercase text-[#8E8E93] flex items-center gap-2">
+                        <Palette className="h-3 w-3" /> Color
+                      </label>
+                      <div className="grid grid-cols-5 gap-2">
+                        {textColors.map((color) => (
+                          <button
+                            key={color}
+                            onClick={() => handleUpdateStyle(el.id, { ...style, color })}
+                            className={`w-8 h-8 rounded-md border transition-all ${style.color === color ? 'border-white scale-110' : 'border-[#2A2A2A] hover:border-[#3A3A3A]'}`}
+                            style={{ background: color }}
+                          />
+                        ))}
+                      </div>
+                    </div>
 
-              <div className="flex items-center justify-between pt-1">
-                <Label htmlFor="shadow-toggle" className="text-[10px] font-bold uppercase text-[#8E8E93]">Shadows</Label>
-                <Switch 
-                  id="shadow-toggle" 
-                  checked={style.shadow || false}
-                  onCheckedChange={(v) => handleUpdateStyle(el.id, { ...style, shadow: v })}
-                />
-              </div>
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-bold uppercase text-[#8E8E93]">Alignment</label>
+                      <div className="flex gap-1 bg-[#181818] p-1 rounded-lg border border-[#2A2A2A]">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className={`flex-1 h-8 ${style.textAlign === 'left' ? 'bg-[#2A2A2A] text-white' : 'text-[#8E8E93]'}`}
+                          onClick={() => handleUpdateStyle(el.id, { ...style, textAlign: 'left' })}
+                        >
+                          <AlignLeft className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className={`flex-1 h-8 ${style.textAlign === 'center' ? 'bg-[#2A2A2A] text-white' : 'text-[#8E8E93]'}`}
+                          onClick={() => handleUpdateStyle(el.id, { ...style, textAlign: 'center' })}
+                        >
+                          <AlignCenter className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className={`flex-1 h-8 ${style.textAlign === 'right' ? 'bg-[#2A2A2A] text-white' : 'text-[#8E8E93]'}`}
+                          onClick={() => handleUpdateStyle(el.id, { ...style, textAlign: 'right' })}
+                        >
+                          <AlignRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
 
-              <div className="pt-3 border-t border-[#2A2A2A]">
-                <label className="text-[10px] font-bold uppercase text-[#8E8E93] block mb-3">Layers</label>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1 h-8 text-[10px] uppercase font-bold border-[#2A2A2A] bg-transparent hover:bg-[#1E1E1E]" onClick={() => handleUpdateStyle(el.id, { ...style, zIndex: (style.zIndex || 0) + 1 })}>Forward</Button>
-                  <Button variant="outline" size="sm" className="flex-1 h-8 text-[10px] uppercase font-bold border-[#2A2A2A] bg-transparent hover:bg-[#1E1E1E]" onClick={() => handleUpdateStyle(el.id, { ...style, zIndex: Math.max(0, (style.zIndex || 0) - 1) })}>Backward</Button>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[10px] font-bold uppercase text-[#8E8E93]">Bold</Label>
+                      <Switch 
+                        checked={style.fontWeight === 'bold'}
+                        onCheckedChange={(v) => handleUpdateStyle(el.id, { ...style, fontWeight: v ? 'bold' : 'normal' })}
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="space-y-3">
+                  <div className="flex justify-between text-[10px] font-bold uppercase text-[#8E8E93]">
+                    <label className="flex items-center gap-2"><RotateCw className="h-3 w-3" /> Rotation</label>
+                    <span>{style.rotation || 0}°</span>
+                  </div>
+                  <Slider 
+                    className="h-4"
+                    value={[style.rotation || 0]} 
+                    max={360} 
+                    step={1} 
+                    onValueChange={([v]) => handleUpdateStyle(el.id, { ...style, rotation: v })}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between text-[10px] font-bold uppercase text-[#8E8E93]">
+                    <label className="flex items-center gap-2"><Layers className="h-3 w-3" /> Opacity</label>
+                    <span>{Math.round((style.opacity ?? 1) * 100)}%</span>
+                  </div>
+                  <Slider 
+                    className="h-4"
+                    value={[(style.opacity ?? 1) * 100]} 
+                    max={100} 
+                    step={1} 
+                    onValueChange={([v]) => handleUpdateStyle(el.id, { ...style, opacity: v / 100 })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="shadow-toggle" className="text-[10px] font-bold uppercase text-[#8E8E93]">Shadows</Label>
+                  <Switch 
+                    id="shadow-toggle" 
+                    checked={style.shadow || false}
+                    onCheckedChange={(v) => handleUpdateStyle(el.id, { ...style, shadow: v })}
+                  />
+                </div>
+
+                <div className="pt-3 border-t border-[#2A2A2A]">
+                  <label className="text-[10px] font-bold uppercase text-[#8E8E93] block mb-3">Layers</label>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1 h-8 text-[10px] uppercase font-bold border-[#2A2A2A] bg-transparent hover:bg-[#1E1E1E]" onClick={() => handleUpdateStyle(el.id, { ...style, zIndex: (style.zIndex || 0) + 1 })}>Forward</Button>
+                    <Button variant="outline" size="sm" className="flex-1 h-8 text-[10px] uppercase font-bold border-[#2A2A2A] bg-transparent hover:bg-[#1E1E1E]" onClick={() => handleUpdateStyle(el.id, { ...style, zIndex: Math.max(0, (style.zIndex || 0) - 1) })}>Backward</Button>
+                  </div>
                 </div>
               </div>
-            </div>
+            </ScrollArea>
           </div>
         );
       })()}
