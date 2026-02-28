@@ -167,33 +167,30 @@ export default function Editor() {
 
       <div className="flex flex-col md:flex-row flex-1 overflow-hidden relative">
         {/* Tools Bar - Left on Desktop, Bottom on Mobile */}
-        <aside className="w-full md:w-20 h-16 md:h-full border-t md:border-t-0 md:border-r border-[#2A2A2A] bg-[#121212] flex flex-row md:flex-col shrink-0 z-50 order-last md:order-first overflow-x-auto overflow-y-hidden md:overflow-y-auto pb-safe">
-          <ScrollArea className="h-full w-full">
-            <div className="flex flex-row md:flex-col items-center py-2 px-4 md:px-0 md:py-6 gap-2 md:gap-6 w-max mx-auto md:w-full md:mx-0 h-full md:h-auto">
+        <aside className="w-full md:w-20 h-16 md:h-full border-t md:border-t-0 md:border-r border-[#2A2A2A] bg-[#121212] flex flex-row md:flex-col shrink-0 z-50 order-last md:order-first overflow-x-auto overflow-y-hidden md:overflow-y-auto pb-safe [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="flex flex-row md:flex-col items-center py-2 px-4 md:px-0 md:py-6 gap-2 md:gap-6 w-max mx-auto md:w-full md:mx-0 h-full md:h-auto">
+            <button
+              onClick={() => setActiveTool(null)}
+              className={`flex flex-col items-center gap-1 md:gap-1.5 transition-all duration-200 group flex-1 md:flex-none ${activeTool === null ? 'text-white' : 'text-[#8E8E93] hover:text-white'}`}
+            >
+              <div className={`p-2  md:p-2.5 rounded-xl transition-all duration-200 ${activeTool === null ? 'bg-[#1E1E1E]' : 'group-hover:bg-[#1E1E1E]'}`}>
+                <MousePointer2 className={`h-5 w-5 md:h-6 md:w-6 ${activeTool === null ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
+              </div>
+              <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider">Select</span>
+            </button>
+            {tools.map((tool) => (
               <button
-                onClick={() => setActiveTool(null)}
-                className={`flex flex-col items-center gap-1 md:gap-1.5 transition-all duration-200 group flex-1 md:flex-none ${activeTool === null ? 'text-white' : 'text-[#8E8E93] hover:text-white'}`}
+                key={tool.id}
+                onClick={() => setActiveTool(tool.id)}
+                className={`flex flex-col items-center gap-1 md:gap-1.5 transition-all duration-200 group flex-1 md:flex-none ${activeTool === tool.id ? 'text-white' : 'text-[#8E8E93] hover:text-white'}`}
               >
-                <div className={`p-2  md:p-2.5 rounded-xl transition-all duration-200 ${activeTool === null ? 'bg-[#1E1E1E]' : 'group-hover:bg-[#1E1E1E]'}`}>
-                  <MousePointer2 className={`h-5 w-5 md:h-6 md:w-6 ${activeTool === null ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
+                <div className={`p-2 md:p-2.5 rounded-xl transition-all duration-200 ${activeTool === tool.id ? 'bg-[#1E1E1E]' : 'group-hover:bg-[#1E1E1E]'}`}>
+                  <tool.icon className={`h-5 w-5 md:h-6 md:w-6 ${activeTool === tool.id ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
                 </div>
-                <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider">Select</span>
+                <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider">{tool.label}</span>
               </button>
-              {tools.map((tool) => (
-                <button
-                  key={tool.id}
-                  onClick={() => setActiveTool(tool.id)}
-                  className={`flex flex-col items-center gap-1 md:gap-1.5 transition-all duration-200 group flex-1 md:flex-none ${activeTool === tool.id ? 'text-white' : 'text-[#8E8E93] hover:text-white'}`}
-                >
-                  <div className={`p-2 md:p-2.5 rounded-xl transition-all duration-200 ${activeTool === tool.id ? 'bg-[#1E1E1E]' : 'group-hover:bg-[#1E1E1E]'}`}>
-                    <tool.icon className={`h-5 w-5 md:h-6 md:w-6 ${activeTool === tool.id ? 'stroke-[2.5px]' : 'stroke-[2px]'}`} />
-                  </div>
-                  <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-wider">{tool.label}</span>
-                </button>
-              ))}
-            </div>
-            <ScrollBar orientation="horizontal" className="md:hidden" />
-          </ScrollArea>
+            ))}
+          </div>
         </aside>
 
         {/* Properties Panel - Right on Desktop, Bottom Sheet on Mobile */}
@@ -307,40 +304,37 @@ export default function Editor() {
           </div>
 
           {/* Bottom Slide Strip */}
-          <div className="bg-[#121212] border-t border-[#2A2A2A] z-20 shrink-0 h-24 md:h-52 flex flex-col justify-center">
-            <ScrollArea className="w-full">
-              <div className="flex px-3 md:px-6 gap-3 md:gap-4 min-w-max pr-12 md:pr-24 items-center">
-                {presentation.slides.sort((a, b) => a.orderIndex - b.orderIndex).map((slide, index) => (
-                  <div
-                    key={slide.id}
-                    onClick={() => setActiveSlideId(slide.id)}
-                    className={`group relative w-32 md:w-48 aspect-video rounded-xl border-2 cursor-pointer overflow-hidden transition-all duration-200 shrink-0 shadow-sm
+          <div className="bg-[#121212] border-t border-[#2A2A2A] z-20 shrink-0 h-24 md:h-52 flex overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="flex px-3 md:px-6 gap-3 md:gap-4 min-w-max pr-12 md:pr-24 items-center h-full mx-auto md:mx-0">
+              {presentation.slides.sort((a, b) => a.orderIndex - b.orderIndex).map((slide, index) => (
+                <div
+                  key={slide.id}
+                  onClick={() => setActiveSlideId(slide.id)}
+                  className={`group relative w-32 md:w-48 aspect-video rounded-xl border-2 cursor-pointer overflow-hidden transition-all duration-200 shrink-0 shadow-sm
                         ${activeSlideId === slide.id ? 'border-white ring-2 md:ring-4 ring-white/10' : 'border-[#2A2A2A] hover:border-[#3A3A3A]'}`}
-                    style={{ background: slide.background || '#1e1e1e' }}
-                  >
-                    <div className="absolute top-2 left-2 w-6 h-6 rounded-md bg-[#121212]/80 backdrop-blur-sm border border-[#2A2A2A] flex items-center justify-center text-[10px] font-bold shadow-sm text-white">
-                      {index + 1}
-                    </div>
-
-                    <button
-                      onClick={(e) => handleDeleteSlide(slide.id, e)}
-                      className="absolute top-2 right-2 p-1.5 bg-[#121212]/80 hover:bg-destructive/20 text-destructive rounded-lg opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm border border-[#2A2A2A] shadow-sm"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-
-                <button
-                  onClick={handleAddSlide}
-                  className="w-32 md:w-48 aspect-video rounded-xl border-2 border-dashed border-[#2A2A2A] flex flex-col items-center justify-center text-[#8E8E93] hover:border-[#3A3A3A] hover:text-white hover:bg-[#181818] transition-all shrink-0"
+                  style={{ background: slide.background || '#1e1e1e' }}
                 >
-                  <Plus className="h-6 w-6 md:h-8 md:w-8 mb-1" />
-                  <span className="text-[10px] md:text-xs font-bold">New Slide</span>
-                </button>
-              </div>
-              <ScrollBar orientation="horizontal" className="bg-[#1E1E1E]" />
-            </ScrollArea>
+                  <div className="absolute top-2 left-2 w-6 h-6 rounded-md bg-[#121212]/80 backdrop-blur-sm border border-[#2A2A2A] flex items-center justify-center text-[10px] font-bold shadow-sm text-white">
+                    {index + 1}
+                  </div>
+
+                  <button
+                    onClick={(e) => handleDeleteSlide(slide.id, e)}
+                    className="absolute top-2 right-2 p-1.5 bg-[#121212]/80 hover:bg-destructive/20 text-destructive rounded-lg opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm border border-[#2A2A2A] shadow-sm"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+
+              <button
+                onClick={handleAddSlide}
+                className="w-32 md:w-48 aspect-video rounded-xl border-2 border-dashed border-[#2A2A2A] flex flex-col items-center justify-center text-[#8E8E93] hover:border-[#3A3A3A] hover:text-white hover:bg-[#181818] transition-all shrink-0"
+              >
+                <Plus className="h-6 w-6 md:h-8 md:w-8 mb-1" />
+                <span className="text-[10px] md:text-xs font-bold">New Slide</span>
+              </button>
+            </div>
           </div>
         </main>
       </div>

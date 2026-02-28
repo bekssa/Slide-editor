@@ -144,6 +144,7 @@ export function SlideCanvas({ slide }: SlideCanvasProps) {
               position={{ x: style.x || 0, y: style.y || 0 }}
               size={{ width: style.width || 200, height: style.height || 100 }}
               scale={scale}
+              onDragStart={(e: any) => handleElementClick(e, el.id)}
               onDragStop={(e: any, d) => {
                 if (d.x === style.x && d.y === style.y) return;
                 handleUpdateStyle(el.id, { ...style, x: d.x, y: d.y });
@@ -170,6 +171,8 @@ export function SlideCanvas({ slide }: SlideCanvasProps) {
                     value={el.content || ''}
                     onChange={(e) => handleContentChange(el.id, e.target.value)}
                     onFocus={(e) => handleElementClick(e, el.id)}
+                    onTouchStart={(e) => handleElementClick(e, el.id)}
+                    onClick={(e) => handleElementClick(e, el.id)}
                     className="w-full h-full resize-none bg-transparent border-none outline-none overflow-hidden p-2 text-white"
                     style={{
                       fontSize: `${style.fontSize || 24}px`,
@@ -179,7 +182,6 @@ export function SlideCanvas({ slide }: SlideCanvasProps) {
                       lineHeight: 1.2
                     }}
                     placeholder="Type something..."
-                    onClick={(e) => handleElementClick(e, el.id)}
                   />
                 ) : el.type === 'image' ? (
                   <div className="w-full h-full bg-[#181818] flex flex-col items-center justify-center overflow-hidden">
@@ -240,17 +242,19 @@ export function SlideCanvas({ slide }: SlideCanvasProps) {
         if (top + popoverHeight > window.innerHeight) top = window.innerHeight - popoverHeight - 20;
         if (top < 10) top = 10;
 
+        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
         return (
           <div
-            className={`fixed bg-[#121212] shadow-2xl border-[#2A2A2A] animate-in z-[100] text-white flex flex-col
-              md:w-[300px] md:max-h-[80vh] md:rounded-2xl md:border md:zoom-in-95
-              w-full h-[50dvh] max-md:bottom-16 left-0 right-0 max-md:rounded-t-2xl max-md:border-t slide-in-from-bottom-full md:slide-in-from-bottom-0 duration-300 md:bottom-auto md:p-0
-            `}
+            className={`fixed bg-[#121212] shadow-2xl border-[#2A2A2A] animate-in text-white flex flex-col w-full h-[50dvh] slide-in-from-bottom-full duration-300 border-t rounded-t-2xl md:w-[300px] md:h-auto md:max-h-[80vh] md:rounded-2xl md:border md:zoom-in-95 md:slide-in-none md:p-0`}
             style={{
-              left: window.innerWidth >= 768 ? `${left}px` : '0',
-              top: window.innerWidth >= 768 ? `${top}px` : 'auto',
+              left: isMobile ? '0' : `${left}px`,
+              top: isMobile ? 'auto' : `${top}px`,
+              bottom: isMobile ? '64px' : 'auto',
+              zIndex: 99999
             }}
             onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
           >
             <div className="w-12 h-1.5 bg-[#2A2A2A] rounded-full mx-auto mt-3 shrink-0 md:hidden" />
 
