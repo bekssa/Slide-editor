@@ -30,7 +30,8 @@ export function SlideCanvas({ slide }: SlideCanvasProps) {
   useEffect(() => {
     const handleResize = () => {
       if (!wrapperRef.current) return;
-      const padding = 80;
+      const isMobile = window.innerWidth < 768;
+      const padding = isMobile ? 20 : 80;
       const wrapperWidth = wrapperRef.current.clientWidth - padding;
       const wrapperHeight = wrapperRef.current.clientHeight - padding;
 
@@ -88,10 +89,29 @@ export function SlideCanvas({ slide }: SlideCanvasProps) {
     setModalPos(null);
   };
 
-  const handleElementClick = (e: React.MouseEvent, elId: number) => {
-    e.stopPropagation();
+  const handleElementClick = (e: any, elId: number) => {
+    if (e && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+    }
     setSelectedElementId(elId);
-    setModalPos({ x: e.clientX, y: e.clientY });
+
+    let clientX = e?.clientX;
+    let clientY = e?.clientY;
+
+    if (e?.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if (e && e.target && typeof e.target.getBoundingClientRect === 'function' && clientX === undefined) {
+      const rect = e.target.getBoundingClientRect();
+      clientX = rect.left + rect.width / 2;
+      clientY = rect.top + rect.height / 2;
+    }
+
+    if (clientX !== undefined && clientY !== undefined && !isNaN(clientX) && !isNaN(clientY)) {
+      setModalPos({ x: clientX, y: clientY });
+    } else {
+      setModalPos({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+    }
   };
 
   const textColors = [
@@ -124,11 +144,11 @@ export function SlideCanvas({ slide }: SlideCanvasProps) {
               position={{ x: style.x || 0, y: style.y || 0 }}
               size={{ width: style.width || 200, height: style.height || 100 }}
               scale={scale}
-              onDragStop={(e, d) => {
+              onDragStop={(e: any, d) => {
                 if (d.x === style.x && d.y === style.y) return;
                 handleUpdateStyle(el.id, { ...style, x: d.x, y: d.y });
               }}
-              onResizeStop={(e, direction, ref, delta, position) => {
+              onResizeStop={(e: any, direction, ref, delta, position) => {
                 handleUpdateStyle(el.id, {
                   ...style,
                   width: parseInt(ref.style.width, 10),
@@ -136,7 +156,7 @@ export function SlideCanvas({ slide }: SlideCanvasProps) {
                   ...position
                 });
               }}
-              onClick={(e) => handleElementClick(e, el.id)}
+              onClick={(e: any) => handleElementClick(e, el.id)}
               className={`group absolute ${isSelected ? 'ring-2 ring-white z-50' : 'hover:ring-1 hover:ring-white/50 z-10'}`}
               style={{
                 transform: `rotate(${style.rotation || 0}deg)`,
@@ -149,7 +169,7 @@ export function SlideCanvas({ slide }: SlideCanvasProps) {
                   <textarea
                     value={el.content || ''}
                     onChange={(e) => handleContentChange(el.id, e.target.value)}
-                    onFocus={(e) => handleElementClick(e as any, el.id)}
+                    onFocus={(e) => handleElementClick(e, el.id)}
                     className="w-full h-full resize-none bg-transparent border-none outline-none overflow-hidden p-2 text-white"
                     style={{
                       fontSize: `${style.fontSize || 24}px`,
@@ -159,7 +179,7 @@ export function SlideCanvas({ slide }: SlideCanvasProps) {
                       lineHeight: 1.2
                     }}
                     placeholder="Type something..."
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(e) => handleElementClick(e, el.id)}
                   />
                 ) : el.type === 'image' ? (
                   <div className="w-full h-full bg-[#181818] flex flex-col items-center justify-center overflow-hidden">
@@ -215,153 +235,174 @@ export function SlideCanvas({ slide }: SlideCanvasProps) {
         let top = modalPos.y - 150;
 
         if (left + popoverWidth > window.innerWidth) left = modalPos.x - popoverWidth - 20;
+        if (left < 10) left = 10;
+
         if (top + popoverHeight > window.innerHeight) top = window.innerHeight - popoverHeight - 20;
-        if (top < 20) top = 20;
+        if (top < 10) top = 10;
 
         return (
           <div
-            className="fixed w-[300px] bg-[#121212] shadow-2xl rounded-2xl p-5 border border-[#2A2A2A] animate-in zoom-in-95 duration-200 z-[100] text-white"
-            style={{ left: `${left}px`, top: `${top}px` }}
+            className={`fixed bg-[#121212] shadow-2xl border-[#2A2A2A] animate-in z-[100] text-white flex flex-col
+              md:w-[300px] md:max-h-[80vh] md:rounded-2xl md:border md:zoom-in-95
+              w-full h-[50dvh] max-md:bottom-16 left-0 right-0 max-md:rounded-t-2xl max-md:border-t slide-in-from-bottom-full md:slide-in-from-bottom-0 duration-300 md:bottom-auto md:p-0
+            `}
+            style={{
+              left: window.innerWidth >= 768 ? `${left}px` : '0',
+              top: window.innerWidth >= 768 ? `${top}px` : 'auto',
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#2A2A2A]">
-              <h3 className="font-bold text-sm flex items-center gap-2">
-                <Settings2 className="h-4 w-4 text-[#8E8E93]" />
-                {el.type === 'text' ? 'Text Style' : 'Properties'}
-              </h3>
-              <div className="flex gap-1">
-                <button onClick={() => handleDelete(el.id)} className="p-1.5 text-destructive hover:bg-destructive/10 rounded-md transition-colors">
-                  <Trash2 className="h-4 w-4" />
-                </button>
-                <button onClick={() => { setSelectedElementId(null); setModalPos(null); }} className="p-1.5 hover:bg-[#1E1E1E] rounded-md transition-colors">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
+            <div className="w-12 h-1.5 bg-[#2A2A2A] rounded-full mx-auto mt-3 shrink-0 md:hidden" />
+
+            <div className="absolute top-4 right-4 flex gap-2">
+              <button
+                onClick={() => handleDelete(el.id)}
+                className="p-1.5 bg-[#181818] md:bg-transparent md:hover:bg-destructive/10 text-destructive hover:text-red-400 rounded-md transition-colors"
+              >
+                <Trash2 className="h-4 w-4 md:h-5 md:w-5" />
+              </button>
+              <button
+                onClick={() => { setSelectedElementId(null); setModalPos(null); }}
+                className="p-1.5 bg-[#181818] md:bg-transparent md:hover:bg-[#1E1E1E] rounded-md transition-colors text-[#8E8E93] hover:text-white"
+              >
+                <X className="h-4 w-4 md:h-5 md:w-5" />
+              </button>
             </div>
 
-            <ScrollArea className="h-[max-content] max-h-[60vh] pr-2">
-              <div className="space-y-6">
+            <div className="p-4 md:p-5 overflow-y-auto flex-1">
+              <h2 className="text-xl md:text-sm font-bold mb-6 md:mb-4 pb-0 md:pb-3 md:border-b md:border-[#2A2A2A] capitalize text-white flex items-center gap-2">
+                <Settings2 className="h-5 w-5 md:h-4 md:w-4 text-[#8E8E93] hidden md:inline-block" />
+                {el.type === 'text' ? 'Text Style' : 'Properties'}
+              </h2>
+
+              <div className="space-y-6 max-md:space-y-8 pb-4">
                 {el.type === 'text' && (
                   <>
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-bold uppercase text-[#8E8E93] flex items-center gap-2">
-                        <TypeIcon className="h-3 w-3" /> Font Size
+                    <div className="space-y-3 max-md:space-y-4">
+                      <label className="text-[10px] max-md:text-[11px] font-bold max-md:font-extrabold uppercase text-[#8E8E93] flex items-center gap-2 max-md:tracking-wider">
+                        <TypeIcon className="h-3 w-3 max-md:h-4 max-md:w-4" /> Font Size
                       </label>
                       <div className="flex items-center gap-4">
                         <Slider
-                          className="flex-1"
+                          className="flex-1 max-md:[&_[role=slider]]:bg-[#0A0A0A] max-md:[&_[role=slider]]:border-[3px] max-md:[&_[role=slider]]:border-[#5B32EA] max-md:[&_[role=slider]]:w-5 max-md:[&_[role=slider]]:h-5 max-md:[&>span:first-child]:bg-[#2A2A2A] max-md:[&>span:first-child>span]:bg-[#5B32EA]"
                           value={[style.fontSize || 24]}
                           min={8}
                           max={120}
                           step={1}
                           onValueChange={([v]) => handleUpdateStyle(el.id, { ...style, fontSize: v })}
                         />
-                        <span className="text-xs min-w-[3ch]">{style.fontSize || 24}</span>
+                        <span className="text-xs max-md:text-sm font-normal max-md:font-bold min-w-[3ch]">{style.fontSize || 24}</span>
                       </div>
                     </div>
 
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-bold uppercase text-[#8E8E93] flex items-center gap-2">
-                        <Palette className="h-3 w-3" /> Color
+                    <div className="space-y-3 max-md:space-y-4">
+                      <label className="text-[10px] max-md:text-[11px] font-bold max-md:font-extrabold uppercase text-[#8E8E93] flex items-center gap-2 max-md:tracking-wider">
+                        <Palette className="h-3 w-3 max-md:h-4 max-md:w-4" /> Color
                       </label>
-                      <div className="grid grid-cols-5 gap-2">
+                      <div className="grid grid-cols-5 gap-2 max-md:gap-3">
                         {textColors.map((color) => (
                           <button
                             key={color}
                             onClick={() => handleUpdateStyle(el.id, { ...style, color })}
-                            className={`w-8 h-8 rounded-md border transition-all ${style.color === color ? 'border-white scale-110' : 'border-[#2A2A2A] hover:border-[#3A3A3A]'}`}
+                            className={`transition-all w-8 h-8 max-md:w-10 max-md:h-10 rounded-md max-md:rounded-xl border max-md:border-none ${style.color === color ? 'border-white max-md:ring-2 max-md:ring-white scale-110' : 'border-[#2A2A2A] max-md:border-none hover:border-[#3A3A3A] max-md:hover:scale-105'}`}
                             style={{ background: color }}
                           />
                         ))}
                       </div>
                     </div>
 
-                    <div className="space-y-3">
-                      <label className="text-[10px] font-bold uppercase text-[#8E8E93]">Alignment</label>
-                      <div className="flex gap-1 bg-[#181818] p-1 rounded-lg border border-[#2A2A2A]">
+                    <div className="space-y-3 max-md:space-y-4">
+                      <label className="text-[10px] max-md:text-[11px] font-bold max-md:font-extrabold uppercase text-[#8E8E93] max-md:tracking-wider">Alignment</label>
+                      <div className="flex gap-1 max-md:gap-2 bg-[#181818] max-md:bg-transparent p-1 max-md:p-0 rounded-lg border border-[#2A2A2A] max-md:border-transparent">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className={`flex-1 h-8 ${style.textAlign === 'left' ? 'bg-[#2A2A2A] text-white' : 'text-[#8E8E93]'}`}
+                          className={`flex-1 h-8 max-md:h-12 max-md:rounded-xl transition-colors ${style.textAlign === 'left' ? 'bg-[#2A2A2A] max-md:bg-[#333333] text-white' : 'text-[#8E8E93] max-md:bg-[#121212] max-md:border max-md:border-[#2A2A2A] max-md:hover:text-white'}`}
                           onClick={() => handleUpdateStyle(el.id, { ...style, textAlign: 'left' })}
                         >
-                          <AlignLeft className="h-4 w-4" />
+                          <AlignLeft className="h-4 w-4 max-md:h-5 max-md:w-5" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className={`flex-1 h-8 ${style.textAlign === 'center' ? 'bg-[#2A2A2A] text-white' : 'text-[#8E8E93]'}`}
+                          className={`flex-1 h-8 max-md:h-12 max-md:rounded-xl transition-colors ${style.textAlign === 'center' ? 'bg-[#2A2A2A] max-md:bg-[#333333] text-white' : 'text-[#8E8E93] max-md:bg-[#121212] max-md:border max-md:border-[#2A2A2A] max-md:hover:text-white'}`}
                           onClick={() => handleUpdateStyle(el.id, { ...style, textAlign: 'center' })}
                         >
-                          <AlignCenter className="h-4 w-4" />
+                          <AlignCenter className="h-4 w-4 max-md:h-5 max-md:w-5" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className={`flex-1 h-8 ${style.textAlign === 'right' ? 'bg-[#2A2A2A] text-white' : 'text-[#8E8E93]'}`}
+                          className={`flex-1 h-8 max-md:h-12 max-md:rounded-xl transition-colors ${style.textAlign === 'right' ? 'bg-[#2A2A2A] max-md:bg-[#333333] text-white' : 'text-[#8E8E93] max-md:bg-[#121212] max-md:border max-md:border-[#2A2A2A] max-md:hover:text-white'}`}
                           onClick={() => handleUpdateStyle(el.id, { ...style, textAlign: 'right' })}
                         >
-                          <AlignRight className="h-4 w-4" />
+                          <AlignRight className="h-4 w-4 max-md:h-5 max-md:w-5" />
                         </Button>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <Label className="text-[10px] font-bold uppercase text-[#8E8E93]">Bold</Label>
+                    <div className="flex items-center justify-between max-md:mt-2">
+                      <Label className="text-[10px] max-md:text-[11px] font-bold max-md:font-extrabold uppercase text-[#8E8E93] max-md:tracking-wider">Bold</Label>
                       <Switch
                         checked={style.fontWeight === 'bold'}
                         onCheckedChange={(v) => handleUpdateStyle(el.id, { ...style, fontWeight: v ? 'bold' : 'normal' })}
+                        className="max-md:[&[data-state=checked]]:bg-[#5B32EA]"
                       />
                     </div>
                   </>
                 )}
 
-                <div className="space-y-3">
-                  <div className="flex justify-between text-[10px] font-bold uppercase text-[#8E8E93]">
-                    <label className="flex items-center gap-2"><RotateCw className="h-3 w-3" /> Rotation</label>
-                    <span>{style.rotation || 0}°</span>
+                <div className="space-y-3 max-md:space-y-4">
+                  <div className="flex justify-between text-[10px] max-md:text-[11px] font-bold max-md:font-extrabold uppercase text-[#8E8E93] max-md:tracking-wider">
+                    <label className="flex items-center gap-2"><RotateCw className="h-3 w-3 max-md:h-4 max-md:w-4" /> Rotation</label>
+                    <span className="font-normal max-md:font-bold">{style.rotation || 0}°</span>
                   </div>
-                  <Slider
-                    className="h-4"
-                    value={[style.rotation || 0]}
-                    max={360}
-                    step={1}
-                    onValueChange={([v]) => handleUpdateStyle(el.id, { ...style, rotation: v })}
-                  />
+                  <div className="px-0 max-md:px-1">
+                    <Slider
+                      className="h-4 max-md:[&_[role=slider]]:bg-[#0A0A0A] max-md:[&_[role=slider]]:border-[3px] max-md:[&_[role=slider]]:border-[#5B32EA] max-md:[&_[role=slider]]:w-5 max-md:[&_[role=slider]]:h-5 max-md:[&>span:first-child]:bg-[#2A2A2A] max-md:[&>span:first-child>span]:bg-[#5B32EA]"
+                      value={[style.rotation || 0]}
+                      max={360}
+                      step={1}
+                      onValueChange={([v]) => handleUpdateStyle(el.id, { ...style, rotation: v })}
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex justify-between text-[10px] font-bold uppercase text-[#8E8E93]">
-                    <label className="flex items-center gap-2"><Layers className="h-3 w-3" /> Opacity</label>
-                    <span>{Math.round((style.opacity ?? 1) * 100)}%</span>
+                <div className="space-y-3 max-md:space-y-4">
+                  <div className="flex justify-between text-[10px] max-md:text-[11px] font-bold max-md:font-extrabold uppercase text-[#8E8E93] max-md:tracking-wider">
+                    <label className="flex items-center gap-2"><Layers className="h-3 w-3 max-md:h-4 max-md:w-4" /> Opacity</label>
+                    <span className="font-normal max-md:font-bold">{Math.round((style.opacity ?? 1) * 100)}%</span>
                   </div>
-                  <Slider
-                    className="h-4"
-                    value={[(style.opacity ?? 1) * 100]}
-                    max={100}
-                    step={1}
-                    onValueChange={([v]) => handleUpdateStyle(el.id, { ...style, opacity: v / 100 })}
-                  />
+                  <div className="px-0 max-md:px-1">
+                    <Slider
+                      className="h-4 max-md:[&_[role=slider]]:bg-[#0A0A0A] max-md:[&_[role=slider]]:border-[3px] max-md:[&_[role=slider]]:border-[#5B32EA] max-md:[&_[role=slider]]:w-5 max-md:[&_[role=slider]]:h-5 max-md:[&>span:first-child]:bg-[#2A2A2A] max-md:[&>span:first-child>span]:bg-[#5B32EA]"
+                      value={[(style.opacity ?? 1) * 100]}
+                      max={100}
+                      step={1}
+                      onValueChange={([v]) => handleUpdateStyle(el.id, { ...style, opacity: v / 100 })}
+                    />
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="shadow-toggle" className="text-[10px] font-bold uppercase text-[#8E8E93]">Shadows</Label>
+                <div className="flex items-center justify-between pb-0 max-md:pb-4">
+                  <Label htmlFor="shadow-toggle" className="text-[10px] max-md:text-[11px] font-bold max-md:font-extrabold uppercase text-[#8E8E93] max-md:tracking-wider">Shadows</Label>
                   <Switch
                     id="shadow-toggle"
                     checked={style.shadow || false}
                     onCheckedChange={(v) => handleUpdateStyle(el.id, { ...style, shadow: v })}
+                    className="max-md:[&[data-state=checked]]:bg-[#5B32EA]"
                   />
                 </div>
 
-                <div className="pt-3 border-t border-[#2A2A2A]">
-                  <label className="text-[10px] font-bold uppercase text-[#8E8E93] block mb-3">Layers</label>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1 h-8 text-[10px] uppercase font-bold border-[#2A2A2A] bg-transparent hover:bg-[#1E1E1E]" onClick={() => handleUpdateStyle(el.id, { ...style, zIndex: (style.zIndex || 0) + 1 })}>Forward</Button>
-                    <Button variant="outline" size="sm" className="flex-1 h-8 text-[10px] uppercase font-bold border-[#2A2A2A] bg-transparent hover:bg-[#1E1E1E]" onClick={() => handleUpdateStyle(el.id, { ...style, zIndex: Math.max(0, (style.zIndex || 0) - 1) })}>Backward</Button>
+                <div className="pt-3 max-md:pt-6 border-t border-[#2A2A2A]">
+                  <label className="text-[10px] max-md:text-[11px] font-bold max-md:font-extrabold uppercase text-[#8E8E93] block mb-3 max-md:mb-4 max-md:tracking-wider">Layers</label>
+                  <div className="flex gap-2 max-md:gap-3">
+                    <Button variant="outline" size="sm" className="flex-1 h-8 max-md:h-12 text-[10px] max-md:text-xs uppercase font-bold max-md:font-extrabold max-md:tracking-wider border-[#2A2A2A] bg-transparent hover:bg-[#1E1E1E] text-white max-md:rounded-xl" onClick={() => handleUpdateStyle(el.id, { ...style, zIndex: (style.zIndex || 0) + 1 })}>Forward</Button>
+                    <Button variant="outline" size="sm" className="flex-1 h-8 max-md:h-12 text-[10px] max-md:text-xs uppercase font-bold max-md:font-extrabold max-md:tracking-wider border-[#2A2A2A] bg-transparent hover:bg-[#1E1E1E] text-white max-md:rounded-xl" onClick={() => handleUpdateStyle(el.id, { ...style, zIndex: Math.max(0, (style.zIndex || 0) - 1) })}>Backward</Button>
                   </div>
                 </div>
               </div>
-            </ScrollArea>
+            </div>
           </div>
         );
       })()}
