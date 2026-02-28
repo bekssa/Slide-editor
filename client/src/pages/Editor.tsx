@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, Link } from "wouter";
-import { 
-  ArrowLeft, Plus, Type, Image as ImageIcon, Layout, Download, Loader2, Trash2, 
+
+import {
+  Plus, Type, Image as ImageIcon, Layout, Download, Loader2, Trash2,
   Shapes, Layers, Palette, BarChart3, UploadCloud, Settings2, ChevronUp, ChevronDown,
   Square, X, MousePointer2
 } from "lucide-react";
@@ -13,24 +13,18 @@ import { useToast } from "@/hooks/use-toast";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
-import screen1 from "@assets/screen_1772138405818.png";
-import screen2 from "@assets/screen_1772138412337.png";
+
 
 type Tool = 'elements' | 'text' | 'uploads' | 'shapes' | 'background' | 'charts';
 
-interface EditorProps {
-  overrideId?: number;
-}
-
-export default function Editor({ overrideId }: EditorProps) {
-  const params = useParams();
-  const presentationId = overrideId || parseInt(params.id || "0", 10);
-  const { data: presentation, isLoading, error } = usePresentation(presentationId);
+export default function Editor() {
+  const { data: presentation, isLoading, error } = usePresentation(1);
   const { toast } = useToast();
 
   const [activeSlideId, setActiveSlideId] = useState<number | null>(null);
   const [activeTool, setActiveTool] = useState<Tool | null>('uploads');
   const [isSlideStripOpen, setIsSlideStripOpen] = useState(true);
+  const [recentUploads, setRecentUploads] = useState<string[]>([]);
 
   const createSlideMutation = useCreateSlide();
   const deleteSlideMutation = useDeleteSlide();
@@ -55,7 +49,7 @@ export default function Editor({ overrideId }: EditorProps) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-[#121212] text-white">
         <h2 className="text-xl font-bold mb-4">Editor initialization failed</h2>
-        <p className="text-muted-foreground mb-4">Please ensure the database is seeded.</p>
+        <p className="text-muted-foreground mb-4">Presentation could not be loaded.</p>
       </div>
     );
   }
@@ -63,14 +57,8 @@ export default function Editor({ overrideId }: EditorProps) {
   const activeSlide = presentation.slides.find(s => s.id === activeSlideId);
 
   const handleAddSlide = async () => {
-    const orderIndex = presentation.slides.length;
     try {
-      const newSlide = await createSlideMutation.mutateAsync({ 
-        presentationId, 
-        orderIndex, 
-        background: '#1e1e1e' 
-      });
-      setActiveSlideId(newSlide.id);
+      await createSlideMutation.mutateAsync({ background: '#1e1e1e' });
     } catch (e) {
       toast({ title: "Failed to add slide", variant: "destructive" });
     }
@@ -79,7 +67,7 @@ export default function Editor({ overrideId }: EditorProps) {
   const handleDeleteSlide = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm("Delete this slide?")) {
-      await deleteSlideMutation.mutateAsync({ id, presentationId });
+      await deleteSlideMutation.mutateAsync({ id });
       if (activeSlideId === id) {
         setActiveSlideId(null);
       }
@@ -91,7 +79,6 @@ export default function Editor({ overrideId }: EditorProps) {
     try {
       await updateSlideMutation.mutateAsync({
         id: activeSlideId,
-        presentationId,
         background: color
       });
     } catch (e) {
@@ -101,19 +88,18 @@ export default function Editor({ overrideId }: EditorProps) {
 
   const handleAddElement = async (type: 'text' | 'image' | 'shape', content = '') => {
     if (!activeSlideId) return;
-    
-    const defaultStyle = type === 'text' 
+
+    const defaultStyle = type === 'text'
       ? { x: 100, y: 100, width: 400, height: 100, fontSize: 32, color: '#ffffff', rotation: 0, opacity: 1, zIndex: 1 }
       : type === 'shape'
-      ? { x: 100, y: 100, width: 100, height: 100, color: '#3b82f6', rotation: 0, opacity: 1, zIndex: 1 }
-      : { x: 100, y: 100, width: 300, height: 200, rotation: 0, opacity: 1, zIndex: 1 };
-      
+        ? { x: 100, y: 100, width: 100, height: 100, color: '#3b82f6', rotation: 0, opacity: 1, zIndex: 1 }
+        : { x: 100, y: 100, width: 300, height: 200, rotation: 0, opacity: 1, zIndex: 1 };
+
     const defaultContent = type === 'text' ? (content || 'Double click to edit text') : content;
 
     try {
       await createElementMutation.mutateAsync({
         slideId: activeSlideId,
-        presentationId,
         type,
         content: defaultContent,
         style: defaultStyle
@@ -124,15 +110,18 @@ export default function Editor({ overrideId }: EditorProps) {
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach((file) => {
       const reader = new FileReader();
       reader.onload = (event) => {
         const base64 = event.target?.result as string;
+        setRecentUploads((prev) => [base64, ...prev]);
         handleAddElement('image', base64);
       };
       reader.readAsDataURL(file);
-    }
+    });
+    e.target.value = '';
   };
 
   const tools: { id: Tool; icon: any; label: string }[] = [
@@ -145,15 +134,14 @@ export default function Editor({ overrideId }: EditorProps) {
   ];
 
   const backgroundColors = [
-    '#1e1e1e', '#ffffff', '#f44336', '#e91e63', '#9c27b0', 
+    '#1e1e1e', '#ffffff', '#f44336', '#e91e63', '#9c27b0',
     '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4'
   ];
 
-  const recentUploads = [screen1, screen2];
+
 
   return (
     <div className="flex flex-col h-screen bg-[#0F0F0F] overflow-hidden text-[#E0E0E0] font-sans dark">
-      {/* Top Navigation */}
       <header className="h-16 border-b border-[#2A2A2A] bg-[#121212] flex items-center px-6 justify-between shrink-0 z-30">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
@@ -164,7 +152,7 @@ export default function Editor({ overrideId }: EditorProps) {
             {presentation.title}
           </h1>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" className="rounded-xl border-[#2A2A2A] bg-transparent hover:bg-[#1E1E1E] text-white font-medium px-4 h-10">
             <Download className="h-4 w-4 mr-2" /> Download PPTX
@@ -176,7 +164,6 @@ export default function Editor({ overrideId }: EditorProps) {
       </header>
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Left Vertical Tool Dock */}
         <aside className="w-20 border-r border-[#2A2A2A] bg-[#121212] flex flex-col shrink-0 z-20">
           <ScrollArea className="h-full w-full">
             <div className="flex flex-col items-center py-6 gap-6">
@@ -205,10 +192,9 @@ export default function Editor({ overrideId }: EditorProps) {
           </ScrollArea>
         </aside>
 
-        {/* Dynamic Tool Panel */}
         {activeTool && (
           <aside className="w-80 border-r border-[#2A2A2A] bg-[#121212] flex flex-col shrink-0 z-10 relative">
-            <button 
+            <button
               onClick={() => setActiveTool(null)}
               className="absolute top-4 right-4 p-1 hover:bg-[#1E1E1E] rounded-md transition-colors text-[#8E8E93] hover:text-white"
             >
@@ -216,17 +202,18 @@ export default function Editor({ overrideId }: EditorProps) {
             </button>
             <div className="p-6">
               <h2 className="text-xl font-bold mb-6 capitalize text-white">{activeTool}</h2>
-              
+
               {activeTool === 'uploads' && (
                 <div className="space-y-8">
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    className="hidden" 
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
                     accept="image/*"
+                    multiple
                     onChange={handleFileUpload}
                   />
-                  <div 
+                  <div
                     onClick={() => fileInputRef.current?.click()}
                     className="border-2 border-dashed border-[#2A2A2A] rounded-2xl p-8 flex flex-col items-center justify-center bg-[#181818] hover:bg-[#1E1E1E] hover:border-[#3A3A3A] transition-all cursor-pointer group"
                   >
@@ -234,53 +221,55 @@ export default function Editor({ overrideId }: EditorProps) {
                       <UploadCloud className="h-6 w-6 text-white" />
                     </div>
                     <span className="text-sm font-semibold mb-1 text-white">Drag & drop area</span>
-                    <Button variant="link" className="text-muted-foreground hover:text-white font-bold h-auto p-0">Upload media</Button>
+                    <Button
+                      variant="link"
+                      className="text-muted-foreground hover:text-white font-bold h-auto p-0"
+                      onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                    >
+                      Upload media
+                    </Button>
                   </div>
 
-                  <div>
-                    <h3 className="text-xs font-bold text-[#8E8E93] uppercase tracking-wider mb-4">Recent Uploads</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button 
-                        onClick={handleAddSlide}
-                        className="aspect-square rounded-xl border border-[#2A2A2A] flex items-center justify-center bg-[#181818] hover:border-[#3A3A3A] transition-all"
-                      >
-                        <Plus className="h-6 w-6 text-[#8E8E93]" />
-                      </button>
-                      {recentUploads.map((img, i) => (
-                        <div 
-                          key={i} 
-                          className="aspect-square rounded-xl overflow-hidden border border-[#2A2A2A] relative group cursor-pointer"
-                          onClick={() => handleAddElement('image', img)}
-                        >
-                          <img src={img} alt="Upload" className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <Plus className="text-white h-6 w-6" />
+                  {recentUploads.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-bold text-[#8E8E93] uppercase tracking-wider mb-4">Recent Uploads</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        {recentUploads.map((img, i) => (
+                          <div
+                            key={i}
+                            className="aspect-square rounded-xl overflow-hidden border border-[#2A2A2A] relative group cursor-pointer"
+                            onClick={() => handleAddElement('image', img)}
+                          >
+                            <img src={img} alt="Upload" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Plus className="text-white h-6 w-6" />
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
               {activeTool === 'text' && (
                 <div className="grid grid-cols-1 gap-3">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="h-16 rounded-xl border-[#2A2A2A] bg-[#181818] hover:bg-[#1E1E1E] justify-start px-4 text-lg font-bold text-white"
                     onClick={() => handleAddElement('text', 'Add a Heading')}
                   >
                     Add a Heading
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="h-14 rounded-xl border-[#2A2A2A] bg-[#181818] hover:bg-[#1E1E1E] justify-start px-4 font-semibold text-white"
                     onClick={() => handleAddElement('text', 'Add a Subheading')}
                   >
                     Add a Subheading
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="h-12 rounded-xl border-[#2A2A2A] bg-[#181818] hover:bg-[#1E1E1E] justify-start px-4 text-sm text-white"
                     onClick={() => handleAddElement('text', 'Add body text')}
                   >
@@ -308,25 +297,25 @@ export default function Editor({ overrideId }: EditorProps) {
         {/* Main Canvas Area */}
         <main className="flex-1 relative flex flex-col bg-[#0A0A0A] overflow-hidden">
           <div className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
-             <SlideCanvas slide={activeSlide} presentationId={presentationId} />
+            <SlideCanvas slide={activeSlide} />
           </div>
 
           {/* Bottom Slide Strip */}
           <div className={`transition-all duration-300 ease-in-out bg-[#121212] border-t border-[#2A2A2A] z-20 ${isSlideStripOpen ? 'h-52' : 'h-10'}`}>
             <div className="h-10 flex items-center justify-center border-b border-[#2A2A2A] relative">
-              <button 
+              <button
                 onClick={() => setIsSlideStripOpen(!isSlideStripOpen)}
                 className="p-1 hover:bg-[#1E1E1E] rounded-md absolute -top-4 bg-[#121212] border border-[#2A2A2A] shadow-sm text-white"
               >
                 {isSlideStripOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
               </button>
             </div>
-            
+
             {isSlideStripOpen && (
               <ScrollArea className="w-full h-42">
                 <div className="flex p-6 gap-4 min-w-max pr-24">
-                  {presentation.slides.sort((a,b) => a.orderIndex - b.orderIndex).map((slide, index) => (
-                    <div 
+                  {presentation.slides.sort((a, b) => a.orderIndex - b.orderIndex).map((slide, index) => (
+                    <div
                       key={slide.id}
                       onClick={() => setActiveSlideId(slide.id)}
                       className={`group relative w-48 aspect-video rounded-xl border-2 cursor-pointer overflow-hidden transition-all duration-200 shrink-0 shadow-sm
@@ -336,8 +325,8 @@ export default function Editor({ overrideId }: EditorProps) {
                       <div className="absolute top-2 left-2 w-6 h-6 rounded-md bg-[#121212]/80 backdrop-blur-sm border border-[#2A2A2A] flex items-center justify-center text-[10px] font-bold shadow-sm text-white">
                         {index + 1}
                       </div>
-                      
-                      <button 
+
+                      <button
                         onClick={(e) => handleDeleteSlide(slide.id, e)}
                         className="absolute top-2 right-2 p-1.5 bg-[#121212]/80 hover:bg-destructive/20 text-destructive rounded-lg opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm border border-[#2A2A2A] shadow-sm"
                       >
@@ -345,8 +334,8 @@ export default function Editor({ overrideId }: EditorProps) {
                       </button>
                     </div>
                   ))}
-                  
-                  <button 
+
+                  <button
                     onClick={handleAddSlide}
                     className="w-48 aspect-video rounded-xl border-2 border-dashed border-[#2A2A2A] flex flex-col items-center justify-center text-[#8E8E93] hover:border-[#3A3A3A] hover:text-white hover:bg-[#181818] transition-all shrink-0"
                   >

@@ -1,32 +1,18 @@
-import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
-
+import { PresentationProvider } from "./context/PresentationContext";
 import Editor from "./pages/Editor";
-
-function Router() {
-  return (
-    <Switch>
-      <Route path="/" component={() => <Editor overrideId={1} />}/>
-      <Route path="/editor/:id" component={Editor}/>
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <PresentationProvider>
       <TooltipProvider>
         <div className="dark">
-          <Router />
+          <Editor />
         </div>
         <Toaster />
       </TooltipProvider>
-    </QueryClientProvider>
+    </PresentationProvider>
   );
 }
 

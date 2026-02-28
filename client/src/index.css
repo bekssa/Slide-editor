@@ -9,7 +9,7 @@
     --font-sans: 'Inter', sans-serif;
     --font-display: 'Plus Jakarta Sans', sans-serif;
 
-    --background: 210 40% 98%; /* Slate 50 */
+    --background: 210 40% 98%;
     --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
@@ -18,7 +18,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 243 75% 59%; /* Indigo 600 */
+    --primary: 243 75% 59%;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
@@ -75,29 +75,36 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
   }
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-display);
     @apply tracking-tight;
   }
 }
 
-/* Custom Canvas Grid Background */
+
 .bg-canvas-grid {
   background-size: 40px 40px;
-  background-image: 
+  background-image:
     linear-gradient(to right, hsl(var(--muted-foreground) / 0.1) 1px, transparent 1px),
     linear-gradient(to bottom, hsl(var(--muted-foreground) / 0.1) 1px, transparent 1px);
 }
 
 .canvas-shadow {
-  box-shadow: 0 20px 40px -15px rgba(0,0,0,0.05), 0 0 10px rgba(0,0,0,0.01);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05), 0 0 10px rgba(0, 0, 0, 0.01);
 }
 
-/* Smooth transitions for interactive elements */
+
 .interactive-transition {
   @apply transition-all duration-200 ease-out;
 }
